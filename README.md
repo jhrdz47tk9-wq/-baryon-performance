@@ -1,18 +1,11 @@
 # BARYON Performance
 
-Proyecto independiente para BARYON / OEE / EBITDA ajustado.
+Aplicación independiente de Wet-Box. Ruta raíz: captura de escenarios de BARYON/OEE/EBITDA, clasificación de evidencia, revisión NO GO y exportación JSON. No contiene modelos propietarios ni calcula resultados ficticios.
 
-## Arquitectura objetivo
+Estado: frontend inicial; API responde 503 explícito. No existe conexión al backend de Wet-Box. Falta contrato e identidad del servicio propio en Google Cloud.
 
-- Interfaz y BFF: Next.js, despliegue en Vercel.
-- Modelos científicos, cálculos y datos: Google Cloud.
-- Código y control de versiones: este repositorio.
-- Independiente de BARYON Wet-Box.
+Arquitectura objetivo: navegador → frontend/BFF Vercel → API privada Google Cloud. Modelos, persistencia y auditoría en Google Cloud; GitHub como fuente versionada y CI. No usar tokens de usuario ni claves privadas en el navegador. Autenticación de usuario, autorización por planta y federación de identidad entre plataformas pendientes antes de activar consultas reales.
 
-## Estado
+Desarrollo: npm install; npm run build. No hay secretos incluidos.
 
-Repositorio inicializado. Carga del frontend pendiente. Google Cloud y Vercel aún no conectados. No hay resultados científicos ejecutados ni despliegue confirmado.
-
-## Criterios
-
-Distinguir datos medidos, supuestos y resultados calculados. Mantener separados efectos internos y factores externos. No presentar simulaciones como observaciones reales. La condición NO GO se muestra como alerta para responsables autorizados; esta aplicación no controla equipos industriales.
+Origen: patrón Next.js de jhrdz47tk9-wq/-baryon-wetbox-ui; formulario recuperado de feat/baryon-performance-workspace. Wet-Box no se modifica.

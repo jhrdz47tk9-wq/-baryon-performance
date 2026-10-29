@@ -1,0 +1,1 @@
+export async function GET(){return Response.json({code:'BACKEND_NOT_CONFIGURED',message:'Servicio independiente Google Cloud pendiente de conexión.'},{status:503,headers:{'Cache-Control':'no-store'}})}
