@@ -1,0 +1,29 @@
+{
+  "schema": "baryon-performance/0.3",
+  "case_id": "BP2_SYNTHETIC",
+  "evidence_class": "SYNTHETIC_TEST_ONLY",
+  "controls": [
+    {
+      "id": "competence",
+      "critical": true,
+      "verified": null
+    }
+  ],
+  "economics": {
+    "entries": [
+      {
+        "consequence_id": "TEST-COST-1",
+        "kind": "incremental_opex",
+        "currency": "USD",
+        "period": "TEST_PERIOD",
+        "price_basis": "CONSTANT_TEST",
+        "source_id": "SYNTHETIC",
+        "baseline": "100",
+        "scenario": "20"
+      }
+    ],
+    "currency": "USD",
+    "period": "TEST_PERIOD",
+    "price_basis": "CONSTANT_TEST"
+  }
+}
