@@ -1,7 +1,7 @@
 """BP2 motor 0.2 candidate. Pure functions; no plant actuation or authorization."""
 from math import isfinite
 
-VERSION = '0.3-candidate'
+VERSION = '0.4-candidate'
 
 def number(x, name, maximum=None):
     if isinstance(x, bool) or not isinstance(x, (int, float)) or not isfinite(x) or x < 0 or (maximum is not None and x > maximum):

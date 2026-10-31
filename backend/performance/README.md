@@ -1,4 +1,4 @@
-# Performance pilot engine 0.3 candidate
+# Performance pilot engine 0.4 candidate
 
 Runs locally with Python 3.12 standard library. No network, credentials or database dependency.
 
@@ -37,3 +37,6 @@ not a real PostgreSQL server. Do not change its case/model IDs to claim compatib
 Next integration requires a registered Performance model/test context and PostgreSQL tests
 with real schema/role, RLS isolation, concurrent retry and commit/readback.
 No production migrations, credentials, historical records or UI changes are included.
+
+## HAZOP extension
+See HAZOP.md and hazop_example.json. Engine output is now 0.4. Schema 0.3 remains accepted with incomplete HAZOP flagged. Current suite: 52 tests.
