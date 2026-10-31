@@ -1,0 +1,60 @@
+{
+  "schema": "baryon-performance/0.4",
+  "case_id": "BP2_HAZOP_CANDIDATE",
+  "evidence_class": "SYNTHETIC_TEST_ONLY",
+  "controls": [],
+  "hazop": [
+    {
+      "id": "TEST-HZ-01",
+      "critical": null,
+      "design_intent": "Transferir efluente dentro de límites definidos por el sitio",
+      "parameter": "flow",
+      "guideword": "NO",
+      "deviation": "Pérdida de evacuación",
+      "cause": "Bomba indisponible",
+      "consequence": "Acumulación en contención",
+      "owner": null,
+      "activity_id": "BP2-E03",
+      "required_barriers": []
+    },
+    {
+      "id": "TEST-HZ-02",
+      "critical": null,
+      "design_intent": "Transferir efluente dentro de límites definidos por el sitio",
+      "parameter": "inflow",
+      "guideword": "MORE",
+      "deviation": "Aumento de aporte",
+      "cause": "Descarga extraordinaria",
+      "consequence": "Reducción de autonomía",
+      "owner": null,
+      "activity_id": "BP2-E04",
+      "required_barriers": []
+    },
+    {
+      "id": "TEST-HZ-03",
+      "critical": null,
+      "design_intent": "Transferir efluente dentro de límites definidos por el sitio",
+      "parameter": "level",
+      "guideword": "MORE",
+      "deviation": "Nivel por encima del límite",
+      "cause": "Aporte superior a evacuación",
+      "consequence": "Pérdida de contención",
+      "owner": null,
+      "activity_id": "BP2-E06",
+      "required_barriers": []
+    },
+    {
+      "id": "TEST-HZ-04",
+      "critical": null,
+      "design_intent": "Transferir efluente dentro de límites definidos por el sitio",
+      "parameter": "flow",
+      "guideword": "REVERSE",
+      "deviation": "Flujo inverso",
+      "cause": "Retención ineficaz",
+      "consequence": "Retorno no previsto",
+      "owner": null,
+      "activity_id": "BP2-E02",
+      "required_barriers": []
+    }
+  ]
+}

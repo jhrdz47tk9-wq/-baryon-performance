@@ -1,0 +1,17 @@
+name: Performance Python
+on:
+  pull_request:
+    paths: ['backend/performance/**', '.github/workflows/performance-python.yml']
+  push:
+    paths: ['backend/performance/**', '.github/workflows/performance-python.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s backend/performance -v

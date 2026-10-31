@@ -1,0 +1,23 @@
+name: Performance PostgreSQL pilot
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: local_ci_only
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 2s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r backend/performance/requirements-pilot.txt
+      - run: python backend/performance/check_postgres.py
+        env:
+          DATABASE_URL: postgresql://postgres:local_ci_only@localhost:5432/postgres
