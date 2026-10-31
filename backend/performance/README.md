@@ -1,6 +1,6 @@
-# Performance pilot engine 0.4 candidate
+# Performance pilot engine 0.5 candidate
 
-Runs locally with Python 3.12 standard library. No network, credentials or database dependency.
+Runs locally with Python 3.12 standard library. The CLI has no network, credentials or database dependency. The optional local HTTP harness uses a local token.
 
 ```sh
 python3 -m unittest discover -s backend/performance -v
@@ -29,7 +29,7 @@ BP2-MOTOR-003: adds economic bridge, JSON executable adapter, integration tests 
 38 local tests passed: 23 carried forward plus 15 economic/adapter checks.
 No simulated probabilities are represented as calibrated THERP or NASA values.
 
-Open gaps: full dependency-aware THERP/PRA, calibration, authenticated HTTP service,
+Open gaps: full dependency-aware THERP/PRA, calibration, production HTTP service,
 identity/tenant authorization, transactional persistence, deployment and frontend connection.
 The separately reviewed Assembly 05 PostgreSQL candidate is scoped to one FPC/Sherlock
 synthetic case and must not be wired directly to this pilot. Its SQL transport tests use mocks,
@@ -39,4 +39,12 @@ with real schema/role, RLS isolation, concurrent retry and commit/readback.
 No production migrations, credentials, historical records or UI changes are included.
 
 ## HAZOP extension
-See HAZOP.md and hazop_example.json. Engine output is now 0.4. Schema 0.3 remains accepted with incomplete HAZOP flagged. Current suite: 52 tests.
+See HAZOP.md and hazop_example.json. Engine output is now 0.4. Schema 0.3 remains accepted with incomplete HAZOP flagged. Current suite: 67 tests. Engine version is 0.5-candidate; output schema remains 0.4.
+
+
+## Local service and autonomy correction
+BP2-SERVICE-005: see SERVICE.md for the loopback-only synthetic HTTP harness.
+Exhausted containment time or two insufficient response margins now yield NO_GO.
+Missing margins, changed conditions, or one insufficient response margin require
+review of the response plan; a feasible alternative does not automatically clear it.
+Existing NO_GO decisions remain active. These outputs never authorize plant operation.

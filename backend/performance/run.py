@@ -3,7 +3,7 @@ import hashlib,json,sys
 from engine import gate,autonomy,oee,error_tree
 from economics import bridge
 from hazop import evaluate
-VERSION='0.4-candidate'
+VERSION='0.5-candidate'
 
 def canonical(value):
     return json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False)
@@ -32,21 +32,35 @@ def execute(payload):
         if key in payload:
             if not isinstance(payload[key],dict): raise ValueError(key+': object required')
             result[key]=fn(**payload[key])
+    if 'autonomy' in result:
+        a=result['autonomy']
+        # Alternative feasibility is not established by arithmetic alone.
+        margins=[a.get('recovery_margin_h'),a.get('mitigation_margin_h')]
+        if a.get('remaining_h') is not None and a['remaining_h']<=0:
+            checks['status']='NO_GO'
+            checks['reasons'].append({'id':'autonomy','reason':'CONTAINMENT_TIME_EXHAUSTED'})
+        elif all(m is not None and m<=0 for m in margins):
+            checks['status']='NO_GO'
+            checks['reasons'].append({'id':'autonomy','reason':'BOTH_RESPONSE_MARGINS_INSUFFICIENT'})
+        elif a['status']!='CALCULADO_CONDICIONAL' or any(m is None or m<=0 for m in margins):
+            if checks['status']!='NO_GO': checks['status']='PENDIENTE'
+            checks['reasons'].append({'id':'autonomy','reason':'REVIEW_RESPONSE_PLAN'})
     return {'schema':'baryon-performance-result/0.4','engine_version':VERSION,'case_id':payload['case_id'],
             'evidence_class':payload['evidence_class'],'input_sha256':digest,'outputs':result,
             'operational_authorization':False,'persistence':'NOT_SAVED','plant_validation':'NOT_EXECUTED'}
 
+def decode(raw):
+    if len(raw)>1048576: raise ValueError('input exceeds 1 MiB')
+    def pairs(items):
+        d={}
+        for k,v in items:
+            if k in d: raise ValueError('duplicate JSON key')
+            d[k]=v
+        return d
+    return json.loads(raw,object_pairs_hook=pairs,parse_constant=lambda x: (_ for _ in ()).throw(ValueError('non-finite JSON')))
+
 if __name__=='__main__':
     try:
-        raw=sys.stdin.buffer.read(1048577)
-        if len(raw)>1048576: raise ValueError('input exceeds 1 MiB')
-        def pairs(items):
-            d={}
-            for k,v in items:
-                if k in d: raise ValueError('duplicate JSON key')
-                d[k]=v
-            return d
-        data=json.loads(raw,object_pairs_hook=pairs,parse_constant=lambda x: (_ for _ in ()).throw(ValueError('non-finite JSON')))
-        print(canonical(execute(data)))
-    except (ValueError,TypeError,KeyError,AttributeError) as e:
+        print(canonical(execute(decode(sys.stdin.buffer.read(1048577)))))
+    except (ValueError,TypeError,KeyError,AttributeError,OverflowError,RecursionError) as e:
         print(json.dumps({'error':'INVALID_INPUT','detail':str(e)},ensure_ascii=False));sys.exit(2)
