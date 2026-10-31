@@ -41,3 +41,15 @@ margin regressions. It does not establish production security or cloud readiness
 Before a remote service: implement managed identity and authorization, production
 HTTP hosting, registered Performance context, transactional persistence, real
 PostgreSQL RLS/concurrency verification, and frontend integration.
+
+### Interfaz autenticada del piloto
+Desde backend/performance, instala requirements-pilot.txt. Aprovisiona pilot.sql
+en una base de prueba y concede a cada rol LOGIN solo USAGE en performance_pilot
+y SELECT, INSERT en runs. Usa un rol sin membresías privilegiadas por cliente.
+Configura BARYON_ACCOUNTS_FILE con la ruta de un archivo JSON privado de solo
+lectura para el servicio. Cada clave es un usuario individual y su valor contiene
+password_hash (werkzeug.security.generate_password_hash), role (rol PostgreSQL)
+y dsn (conexión de ese rol). Guarda este archivo fuera del repositorio.
+Ejecuta gunicorn --workers 1 --bind 127.0.0.1:8080 'pilot_web:configured_app()'
+y abre http://127.0.0.1:8080/. Para acceso remoto, termina HTTPS en un proxy
+autorizado. El formulario usa autenticación HTTP Basic y acepta casos sintéticos.
