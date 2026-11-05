@@ -3,10 +3,20 @@ import hashlib,json,sys
 from engine import gate,autonomy,oee,error_tree
 from economics import bridge
 from hazop import evaluate
-VERSION='0.6-candidate'
+VERSION='0.7-candidate'
 
 def canonical(value):
     return json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False)
+
+def validate_trace(record, required=False):
+    keys = {'document', 'section', 'criterion', 'observed', 'reviewer'}
+    if not isinstance(record, dict) or set(record) != keys:
+        raise ValueError('invalid document trace')
+    if any(not isinstance(v, str) or len(v) > 1000 for v in record.values()):
+        raise ValueError('invalid document trace text')
+    if required and not all(v.strip() for v in record.values()):
+        raise ValueError('verified record requires complete document trace')
+
 
 def execute(payload):
     if not isinstance(payload,dict): raise ValueError('object required')
@@ -18,7 +28,7 @@ def execute(payload):
     if not isinstance(payload.get('controls'),list): raise ValueError('controls required')
     context = payload.get('context')
     if context is not None:
-        if not isinstance(context, dict) or set(context) != {'task', 'responsible', 'evidence'}:
+        if not isinstance(context, dict) or not {'task', 'responsible', 'evidence'} <= set(context) or set(context) - {'task', 'responsible', 'evidence', 'evidence_trace'}:
             raise ValueError('invalid context')
         for name, limit in [('task', 500), ('responsible', 200)]:
             if not isinstance(context[name], str) or not context[name].strip() or len(context[name]) > limit:
@@ -27,6 +37,16 @@ def execute(payload):
                 not isinstance(k, str) or not isinstance(v, str) or len(v) > 1000
                 for k, v in context['evidence'].items()):
             raise ValueError('invalid evidence references')
+    if context is not None and 'evidence_trace' in context:
+        traces = context['evidence_trace']
+        if not isinstance(traces, dict) or set(traces) != {c['id'] for c in payload['controls']}:
+            raise ValueError('invalid control trace map')
+        for control in payload['controls']:
+            validate_trace(traces[control['id']], control.get('verified') is True)
+    for node in payload.get('hazop', []):
+        for barrier in node.get('required_barriers', []):
+            if 'document_trace' in barrier:
+                validate_trace(barrier['document_trace'], barrier.get('verified') is True)
     digest=hashlib.sha256(canonical(payload).encode()).hexdigest()
     checks=gate(payload['controls'])
     if payload['schema']=='baryon-performance/0.4' and 'hazop' not in payload:
