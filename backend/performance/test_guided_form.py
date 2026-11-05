@@ -3,12 +3,14 @@ import re
 import base64
 from unittest.mock import MagicMock, patch
 from werkzeug.security import generate_password_hash
-from pilot_web import create_app, guided_payload, CONTROLS
+from pilot_web import create_app, guided_payload, CONTROLS, TRACE_FIELDS
 from run import execute
 
 class GuidedFormTests(unittest.TestCase):
     def setUp(self):
         self.values = {"case_id":"SIM-001", "task":"Reparación simulada", "responsible":"Persona de prueba"}
+        for prefix in [name for name, _ in CONTROLS] + ['barrier']:
+            self.values.update({prefix+'_trace_'+key: 'QA ficticia: '+key for key, _ in TRACE_FIELDS})
         self.client = create_app({"test":{"password_hash":generate_password_hash("test"),
                                           "dsn":"unused", "role":"bp_pilot_app"}}).test_client()
         self.headers = {"Authorization":"Basic "+base64.b64encode(b"test:test").decode()}
