@@ -14,6 +14,10 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from persist import save
 from run import decode
 
+TRACE_FIELDS = [("document", "Documento y versión"), ("section", "Sección o página"),
+                ("criterion", "Criterio de aceptación"), ("observed", "Evidencia observada"),
+                ("reviewer", "Revisor declarado")]
+
 CONTROLS = [
     ("competence", "Competencia de la persona"),
     ("risk_assessment", "Análisis de riesgos de la tarea"),
@@ -62,6 +66,11 @@ FORM = """<!doctype html><html lang="es"><meta charset="utf-8">
 <p>Completa una tarea simulada. Los cuatro controles son críticos y esta lista no sustituye el análisis completo de riesgos.</p>
 {% if error %}<p role="alert"><strong>{{ error }}</strong></p>{% endif %}
 <p><a href="/?example=hazop">Cargar ejemplo sintético de una bomba</a> (reemplaza los campos; no verifica controles).</p>
+{% macro trace_form(prefix) %}
+<details><summary>Trazabilidad documental</summary>
+<p>Completa los cinco campos para declarar este control verificado. En pruebas, utiliza referencias ficticias identificadas como tales. Registrar un revisor no acredita su aprobación.</p>
+{% for key, label in trace_fields %}<p><label>{{ label }}<br><textarea name="{{ prefix }}_trace_{{ key }}" maxlength="1000" rows="2">{{ values.get(prefix ~ '_trace_' ~ key, '') }}</textarea></label></p>{% endfor %}
+</details>{% endmacro %}
 <form method="post">
 <input type="hidden" name="form_mode" value="guided">
 <input type="hidden" name="response_format" value="html">
@@ -77,6 +86,7 @@ FORM = """<!doctype html><html lang="es"><meta charset="utf-8">
 {% endfor %}</select></label></p>
 <p><label>Referencia o descripción de evidencia simulada<br>
 <textarea name="{{ id }}_evidence" rows="3" cols="36" maxlength="1000">{{ values.get(id ~ '_evidence', '') }}</textarea></label></p>
+{{ trace_form(id) }}
 <p>Para marcar verificado debes indicar una referencia. El sistema registra tu declaración; no valida el documento.</p>
 </fieldset>
 {% endfor %}
@@ -99,6 +109,7 @@ FORM = """<!doctype html><html lang="es"><meta charset="utf-8">
 {% for id, label in [('barrier_evidence','Referencia de evidencia de la barrera'),('barrier_owner','Responsable de la barrera'),('pending_actions','Acción abierta y responsable de resolverla')] %}
 <p><label>{{ label }}<br><textarea name="{{ id }}" maxlength="1000">{{ values.get(id, '') }}</textarea></label></p>
 {% endfor %}
+{{ trace_form("barrier") }}
 <p>Si requiere respuesta temporal, registra todos los tiempos en horas. La suma incluye la reserva y debe ser menor que el tiempo disponible.</p>
 {% for id, label in time_fields %}<p><label>{{ label }} (h)<br><input type="number" step="any" min="0" name="{{ id }}" value="{{ values.get(id, '') }}"></label></p>{% endfor %}
 </fieldset>
@@ -112,12 +123,18 @@ def guided_payload(form):
         if len(value) > limit:
             raise ValueError("Un campo supera la longitud permitida.")
         return value
+    def trace(prefix, verified, label):
+        record = {key: field(prefix + "_trace_" + key, 1000) for key, _ in TRACE_FIELDS}
+        if verified and not all(record.values()):
+            raise ValueError("Completa la trazabilidad documental para: " + label + ".")
+        return record
     case = field("case_id", 120)
     context = {"task": field("task", 500), "responsible": field("responsible", 200)}
     if not case or not all(context.values()):
         raise ValueError("Completa el código, la tarea y el responsable.")
     controls = []
     evidence = {}
+    evidence_trace = {}
     for id, label in CONTROLS:
         status = form.get(id + "_status", "unknown")
         if status not in ("unknown", "failed", "verified"):
@@ -128,7 +145,9 @@ def guided_payload(form):
         controls.append({"id": id, "critical": True,
                          "verified": {"unknown": None, "failed": False, "verified": True}[status]})
         evidence[id] = reference
+        evidence_trace[id] = trace(id, status == "verified", label)
     context["evidence"] = evidence
+    context["evidence_trace"] = evidence_trace
     nodes = []
     if form.get("hazop_enabled", "") not in ("", "yes"):
         raise ValueError("Selección de HAZOP inválida.")
@@ -149,6 +168,7 @@ def guided_payload(form):
                    "evidence_id": field("barrier_evidence", 1000), "owner": field("barrier_owner", 1000)}
         if barrier["verified"] is True and not barrier["evidence_id"]:
             raise ValueError("Agrega evidencia simulada para la barrera.")
+        barrier["document_trace"] = trace("barrier", barrier["verified"] is True, "barrera HAZOP")
         if not barrier["description"]:
             raise ValueError("Describe la barrera requerida.")
         import math
@@ -191,12 +211,16 @@ RESULT = """<!doctype html><html lang="es"><meta charset="utf-8">
 <ul>{% for reason in gate.get('reasons', []) %}
 <li>{% if reason is mapping %}{{ labels.get(reason.get('id'), reason.get('id', '')) }}: {{ reasons.get(reason.get('reason'), reason.get('reason', '')) }}{% else %}{{ reasons.get(reason, reason) }}{% endif %}</li>
 {% else %}<li>El motor no reportó motivos pendientes. Requiere revisión humana.</li>{% endfor %}</ul>
+{% macro trace_result(record) %}<dl>{% for key, label in trace_fields %}<dt>{{ label }}</dt><dd>{{ record.get(key) or 'Sin completar' }}</dd>{% endfor %}</dl>{% endmacro %}
+<h2>Trazabilidad documental declarada</h2>
+<p>Las referencias y el revisor son datos declarados; no acreditan validación documental ni aprobación.</p>
+{% if result.get('context', {}).get('evidence_trace') %}{% for id, record in result.context.evidence_trace.items() %}<h3>{{ labels.get(id, id) }}</h3>{{ trace_result(record) }}{% endfor %}{% else %}<p>Registro anterior sin trazabilidad estructurada.</p>{% endif %}
 <h2>Detalle del HAZOP simulado</h2>
 {% for node in result.outputs.hazop.nodes %}
 <section><h3>{{ node.id }} · {{ node.status }}</h3>
 {% if node.get('record') %}<dl>{% for key, label, _ in hazop_fields %}<dt>{{ label }}</dt><dd>{{ node.record.get(key) or 'Sin completar' }}</dd>{% endfor %}
 <dt>Acciones abiertas</dt><dd>{{ node.record.get('pending_actions') or 'Sin texto registrado' }}</dd></dl>
-{% for barrier in node.record.required_barriers %}<p><strong>{{ barrier.id }}</strong>: {{ barrier.get('description', '') }}<br>Evidencia declarada: {{ barrier.get('evidence_id') or 'Sin evidencia' }}<br>Responsable: {{ barrier.get('owner') or 'Sin responsable' }}</p>{% endfor %}{% endif %}
+{% for barrier in node.record.required_barriers %}<p><strong>{{ barrier.id }}</strong>: {{ barrier.get('description', '') }}<br>Evidencia declarada: {{ barrier.get('evidence_id') or 'Sin evidencia' }}<br>Responsable: {{ barrier.get('owner') or 'Sin responsable' }}</p>{% if barrier.get('document_trace') %}{{ trace_result(barrier.document_trace) }}{% endif %}{% endfor %}{% endif %}
 <ul>{% for issue in node.issues %}<li>{{ hazop_issue(issue) }}</li>{% else %}<li>Registro listo para revisión humana; no autoriza una operación.</li>{% endfor %}</ul></section>
 {% else %}<p>No se incluyeron nodos; el análisis permanece pendiente.</p>{% endfor %}
 <p><a href="/">Volver al formulario</a> · <a download="baryon-resultado.json" href="{{ download }}">Descargar JSON</a></p>
@@ -210,7 +234,7 @@ def create_app(accounts, *, iap_audience=None, iap_users=None):
         raise ValueError("IAP account mapping is incomplete")
     keys = jwt.PyJWKClient("https://www.gstatic.com/iap/verify/public_key-jwk", timeout=5) if iap_audience else None
     app = Flask(__name__)
-    app.jinja_env.globals.update(hazop_fields=HAZOP_FIELDS, time_fields=TIME_FIELDS, hazop_issue=hazop_issue)
+    app.jinja_env.globals.update(trace_fields=TRACE_FIELDS, hazop_fields=HAZOP_FIELDS, time_fields=TIME_FIELDS, hazop_issue=hazop_issue)
     app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024
     key = secrets.token_bytes(32)
     dummy = generate_password_hash(secrets.token_urlsafe())
