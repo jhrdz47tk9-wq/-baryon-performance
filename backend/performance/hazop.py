@@ -17,6 +17,12 @@ def evaluate(nodes):
         for field in ('design_intent','parameter','guideword','deviation','cause','consequence','owner','activity_id'):
             if not text(n.get(field)): issues.append('MISSING_'+field.upper())
         if critical is None: issues.append('CRITICALITY_UNVERIFIED')
+        if 'actions_reviewed' in n:
+            if type(n['actions_reviewed']) is not bool: raise ValueError('actions_reviewed must be boolean')
+            if not n['actions_reviewed']: issues.append('ACTIONS_UNREVIEWED')
+        if 'pending_actions' in n:
+            if not isinstance(n['pending_actions'], str) or len(n['pending_actions']) > 1000: raise ValueError('invalid pending actions')
+            if n['pending_actions'].strip(): issues.append('OPEN_ACTIONS')
         barriers=n.get('required_barriers')
         if not isinstance(barriers,list): raise ValueError('required_barriers must be list')
         if not barriers: issues.append('NO_VERIFIED_PROTECTION_PLAN')
@@ -47,7 +53,7 @@ def evaluate(nodes):
         state='NO_GO' if critical is True and issues else 'PENDIENTE' if issues else 'LISTO_PARA_REVISION'
         if state=='NO_GO': blocks.append(key)
         elif state=='PENDIENTE': pending.append(key)
-        results.append({'id':key,'activity_id':n.get('activity_id'),'status':state,'issues':issues,'barriers':details})
+        results.append({'id':key,'activity_id':n.get('activity_id'),'status':state,'issues':issues,'barriers':details,'record':n})
     return {'status':'NO_GO' if blocks else 'PENDIENTE' if pending or not nodes else 'LISTO_PARA_REVISION',
             'nodes':results,'blocking_nodes':blocks,'authorized':False,
             'scope':'REQUIRED_BARRIERS_ONLY_NO_PROBABILITY_CREDIT'}
