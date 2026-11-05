@@ -3,7 +3,7 @@ import hashlib,json,sys
 from engine import gate,autonomy,oee,error_tree
 from economics import bridge
 from hazop import evaluate
-VERSION='0.5-candidate'
+VERSION='0.6-candidate'
 
 def canonical(value):
     return json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False)
